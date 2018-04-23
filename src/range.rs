@@ -16,6 +16,12 @@ pub enum WildcardVersion {
 }
 
 #[derive(PartialEq,Debug)]
+pub enum CompatibleOp {
+    Caret,
+    Default_,
+}
+
+#[derive(PartialEq,Debug)]
 pub enum Op {
     Ex, // Exact
     Gt, // Greater than
@@ -23,7 +29,7 @@ pub enum Op {
     Lt, // Less than
     LtEq, // Less than or equal to
     Tilde, // e.g. ~1.0.0
-    Compatible, // compatible by definition of semver, indicated by ^
+    Compatible(CompatibleOp), // compatible by definition of semver, indicated by ^
     Wildcard(WildcardVersion), // x.y.*, x.*, *
 }
 
@@ -38,7 +44,7 @@ impl FromStr for Op {
             "<" => Ok(Op::Lt),
             "<=" => Ok(Op::LtEq),
             "~" => Ok(Op::Tilde),
-            "^" => Ok(Op::Compatible),
+            "^" => Ok(Op::Compatible(CompatibleOp::Caret)),
             _ => Err(String::from("Could not parse Op")),
         }
     }
@@ -83,7 +89,7 @@ fn operation(s: &[u8]) -> Option<(Op, usize)> {
     } else if let Some(len) = "~".p(s) {
         Some((Op::Tilde, len))
     } else if let Some(len) = "^".p(s) {
-        Some((Op::Compatible, len))
+        Some((Op::Compatible(CompatibleOp::Caret), len))
     } else {
         None
     }
@@ -100,9 +106,9 @@ pub fn parse_predicate(range: &str) -> Result<Predicate, String> {
         i += len;
         op
     } else {
-        // operations default to Compatible
-        Op::Compatible
+        Op::Compatible(CompatibleOp::Default_)
     };
+
     if let Some(len) = whitespace.p(&s[i..]) {
         i += len;
     }
@@ -203,7 +209,7 @@ mod tests {
         let r = range::parse("1.0.0").unwrap();
 
         assert_eq!(Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 1,
                 minor: Some(0),
                 patch: Some(0),
@@ -354,7 +360,7 @@ mod tests {
         let r = range::parse("^0").unwrap();
 
         assert_eq!(Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Caret),
                 major: 0,
                 minor: None,
                 patch: None,
@@ -544,7 +550,7 @@ mod tests {
         let r = range::parse("0.3.0, 0.4.0").unwrap();
 
         assert_eq!(Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 0,
                 minor: Some(3),
                 patch: Some(0),
@@ -554,7 +560,7 @@ mod tests {
         );
 
         assert_eq!(Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 0,
                 minor: Some(4),
                 patch: Some(0),
@@ -594,7 +600,7 @@ mod tests {
         let r = range::parse("0.1.0, 0.1.4, 0.1.6").unwrap();
 
         assert_eq!(Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 0,
                 minor: Some(1),
                 patch: Some(0),
@@ -604,7 +610,7 @@ mod tests {
         );
 
         assert_eq!(Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 0,
                 minor: Some(1),
                 patch: Some(4),
@@ -614,7 +620,7 @@ mod tests {
         );
 
         assert_eq!(Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 0,
                 minor: Some(1),
                 patch: Some(6),
@@ -652,7 +658,7 @@ mod tests {
     #[test]
     fn test_parse_build_metadata_with_predicate() {
         assert_eq!(range::parse("^1.2.3+meta").unwrap().predicates[0].op,
-                   Op::Compatible);
+                   Op::Compatible(CompatibleOp::Default_));
         assert_eq!(range::parse("~1.2.3+meta").unwrap().predicates[0].op,
                    Op::Tilde);
         assert_eq!(range::parse("=1.2.3+meta").unwrap().predicates[0].op,

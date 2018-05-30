@@ -16,7 +16,7 @@
 //! let r = range::parse("1.0.0")?;
 //!
 //! assert_eq!(range::Predicate {
-//!         op: range::Op::Compatible,
+//!         op: range::Op::Compatible(range::CompatibleOp::Default_),
 //!         major: 1,
 //!         minor: Some(0),
 //!         patch: Some(0),
@@ -28,7 +28,7 @@
 //! let m = version::parse("1.0.0")?;
 //! for p in &r.predicates {
 //!     match p.op {
-//!         range::Op::Compatible => {
+//!         range::Op::Compatible(range::CompatibleOp::Default_) => {
 //!             assert_eq!(p.major, m.major);
 //!         }
 //!         _ => {

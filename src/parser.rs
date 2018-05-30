@@ -7,11 +7,11 @@
 //!
 //! ```rust
 //! use semver_parser::parser::Parser;
-//! use semver_parser::range::Op;
+//! use semver_parser::range::{ CompatibleOp, Op };
 //!
 //! let mut p = Parser::new("^1").expect("a broken parser");
 //!
-//! assert_eq!(Ok(Op::Compatible), p.op());
+//! assert_eq!(Ok(Op::Compatible(CompatibleOp::Caret)), p.op());
 //! assert_eq!(Ok(Some(1)), p.component());
 //! ```
 //!
@@ -19,12 +19,12 @@
 //!
 //! ```rust
 //! use semver_parser::parser::Parser;
-//! use semver_parser::range::{Op, Predicate};
+//! use semver_parser::range::{CompatibleOp, Op, Predicate};
 //!
 //! let mut p = Parser::new("^1.0").expect("a broken parser");
 //!
 //! assert_eq!(Ok(Some(Predicate {
-//!     op: Op::Compatible,
+//!     op: Op::Compatible(CompatibleOp::Caret),
 //!     major: 1,
 //!     minor: Some(0),
 //!     patch: None,
@@ -38,7 +38,7 @@
 
 use lexer::{self, Lexer, Token};
 use self::Error::*;
-use range::{Predicate, Op, VersionReq, WildcardVersion};
+use range::{Predicate, Op, CompatibleOp, VersionReq, WildcardVersion};
 use comparator::Comparator;
 use version::{Version, Identifier};
 use std::mem;
@@ -305,9 +305,9 @@ impl<'input> Parser<'input> {
             Some(&Lt) => Op::Lt,
             Some(&LtEq) => Op::LtEq,
             Some(&Tilde) => Op::Tilde,
-            Some(&Caret) => Op::Compatible,
+            Some(&Caret) => Op::Compatible(CompatibleOp::Caret),
             // default op
-            _ => return Ok(Op::Compatible),
+            _ => return Ok(Op::Compatible(CompatibleOp::Default_)),
         };
 
         // remove the matched token.

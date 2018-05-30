@@ -17,7 +17,7 @@
 //! let r = range::parse("1.0.0")?;
 //!
 //! assert_eq!(range::Predicate {
-//!         op: range::Op::Compatible,
+//!         op: range::Op::Compatible(range::CompatibleOp::Default_),
 //!         major: 1,
 //!         minor: Some(0),
 //!         patch: Some(0),
@@ -29,7 +29,7 @@
 //! let m = version::parse("1.0.0")?;
 //! for p in &r.predicates {
 //!     match p.op {
-//!         range::Op::Compatible => {
+//!         range::Op::Compatible(range::CompatibleOp::Default_) => {
 //!             assert_eq!(p.major, m.major);
 //!         }
 //!         _ => {
@@ -67,7 +67,7 @@ use std::str::FromStr;
 /// let r = range::parse("1.0.0")?;
 ///
 /// assert_eq!(range::Predicate {
-///         op: range::Op::Compatible,
+///         op: range::Op::Compatible(range::CompatibleOp::Default_),
 ///         major: 1,
 ///         minor: Some(0),
 ///         patch: Some(0),
@@ -199,10 +199,26 @@ pub enum Op {
     Tilde,
     /// [Compatible](http://doc.crates.io/specifying-dependencies.html#caret-requirements)
     /// by definition of semver, indicated by `^`.
-    Compatible,
+    Compatible(CompatibleOp),
     /// `x.y.*`, `x.*`, `*`.
     Wildcard(WildcardVersion),
 }
+
+#[derive(PartialOrd, Ord, Debug, Clone, Hash)]
+pub enum CompatibleOp {
+    /// `^1.0.0`
+    Caret,
+    /// `1.0.0`
+    Default_,
+}
+
+impl PartialEq for CompatibleOp {
+    fn eq(&self, _other: &CompatibleOp) -> bool {
+        true
+    }
+}
+
+impl Eq for CompatibleOp {}
 
 impl FromStr for Op {
     type Err = String;
@@ -215,7 +231,7 @@ impl FromStr for Op {
             "<" => Ok(Op::Lt),
             "<=" => Ok(Op::LtEq),
             "~" => Ok(Op::Tilde),
-            "^" => Ok(Op::Compatible),
+            "^" => Ok(Op::Compatible(CompatibleOp::Caret)),
             _ => Err(String::from("Could not parse Op")),
         }
     }
@@ -321,7 +337,7 @@ pub fn parse_predicate<'input>(
 /// let r = range::parse("1.0.0")?;
 ///
 /// assert_eq!(range::Predicate {
-///         op: range::Op::Compatible,
+///         op: range::Op::Compatible(range::CompatibleOp::Default_),
 ///         major: 1,
 ///         minor: Some(0),
 ///         patch: Some(0),
@@ -410,7 +426,7 @@ mod tests {
 
         assert_eq!(
             Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 1,
                 minor: Some(0),
                 patch: Some(0),
@@ -573,7 +589,7 @@ mod tests {
 
         assert_eq!(
             Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Caret),
                 major: 0,
                 minor: None,
                 patch: None,
@@ -787,7 +803,7 @@ mod tests {
 
         assert_eq!(
             Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 0,
                 minor: Some(3),
                 patch: Some(0),
@@ -798,7 +814,7 @@ mod tests {
 
         assert_eq!(
             Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 0,
                 minor: Some(4),
                 patch: Some(0),
@@ -841,7 +857,7 @@ mod tests {
 
         assert_eq!(
             Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 0,
                 minor: Some(1),
                 patch: Some(0),
@@ -852,7 +868,7 @@ mod tests {
 
         assert_eq!(
             Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 0,
                 minor: Some(1),
                 patch: Some(4),
@@ -863,7 +879,7 @@ mod tests {
 
         assert_eq!(
             Predicate {
-                op: Op::Compatible,
+                op: Op::Compatible(CompatibleOp::Default_),
                 major: 0,
                 minor: Some(1),
                 patch: Some(6),
@@ -904,7 +920,7 @@ mod tests {
     fn test_parse_build_metadata_with_predicate() {
         assert_eq!(
             range::parse("^1.2.3+meta").unwrap().predicates[0].op,
-            Op::Compatible
+            Op::Compatible(CompatibleOp::Caret)
         );
         assert_eq!(
             range::parse("~1.2.3+meta").unwrap().predicates[0].op,
@@ -977,14 +993,14 @@ mod tests {
 
     #[test]
     pub fn test_op_partialord_gt() {
-        let expect_gt = Op::Compatible;
+        let expect_gt = Op::Compatible(CompatibleOp::Default_);
         let other = Op::GtEq;
         assert!(expect_gt.gt(&other));
     }
 
     #[test]
     pub fn test_op_partialord_ge() {
-        let strictly_gt = Op::Compatible;
+        let strictly_gt = Op::Compatible(CompatibleOp::Caret);
         let other = Op::Tilde;
         assert!(strictly_gt.ge(&other));
         assert!(other.ge(&other));
